@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detalle del pedido | Autopartes G15</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+  <div class="md:flex md:min-h-screen">
+    <aside id="sidebar" class="md:w-60 md:shrink-0"></aside>
+
+    <main class="flex-1 p-4 md:p-8">
+      <a href="pedidos.html" class="text-sm font-medium text-blue-700 hover:underline">Volver a pedidos</a>
+
+      <!-- Acá se muestran los avisos (éxito o error) -->
+      <div id="aviso" role="status" class="mt-4 hidden rounded-md px-4 py-3 text-sm"></div>
+
+      <!-- Si el pedido no existe -->
+      <p id="noEncontrado" class="mt-8 hidden text-slate-600">
+        No encontramos ese pedido. Volvé al listado y elegí uno.
+      </p>
+
+      <!-- Contenido principal: se muestra cuando el pedido cargó -->
+      <section id="contenido" class="mt-4 hidden">
+        <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 id="titulo" class="text-2xl font-semibold"></h1>
+            <div id="estado" class="mt-2"></div>
+          </div>
+          <button id="btnFacturar" type="button"
+                  class="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60">
+            Facturar pedido
+          </button>
+        </header>
+
+        <dl class="mb-6 grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-sm text-slate-500">Cliente</dt>
+            <dd id="cliente" class="font-medium"></dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">Fecha del pedido</dt>
+            <dd id="fecha" class="font-medium"></dd>
+          </div>
+        </dl>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <tr>
+                <th class="px-4 py-3 font-medium">Autoparte</th>
+                <th class="px-4 py-3 font-medium">Marca</th>
+                <th class="px-4 py-3 text-right font-medium">Cantidad</th>
+                <th class="px-4 py-3 text-right font-medium">Precio unitario</th>
+                <th class="px-4 py-3 text-right font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="tablaDetalle" class="divide-y divide-slate-100"></tbody>
+            <tfoot class="border-t border-slate-200 bg-slate-50">
+              <tr>
+                <td colspan="4" class="px-4 py-3 text-right font-medium">Total</td>
+                <td id="total" class="px-4 py-3 text-right text-base font-semibold tabular-nums"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Ventanita de confirmación antes de facturar -->
+  <dialog id="confirmar" class="w-full max-w-md rounded-lg p-0 shadow-xl backdrop:bg-slate-900/50">
+    <div class="p-6">
+      <h2 class="text-lg font-semibold">¿Facturar este pedido?</h2>
+      <p id="confirmarTexto" class="mt-2 text-sm text-slate-600"></p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button id="btnCancelar" type="button"
+                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btnConfirmar" type="button"
+                class="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
+          Sí, facturar
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="js/utils.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    renderSidebar("pedidos");
+
+    // 1) Sacamos el número de pedido de la dirección: pedido-detalle.html?id=1001
+    const id = new URLSearchParams(window.location.search).get("id");
+
+    // 2) Guardamos los elementos de la página para usarlos después
+    const el = {
+      aviso: document.getElementById("aviso"),
+      noEncontrado: document.getElementById("noEncontrado"),
+      contenido: document.getElementById("contenido"),
+      titulo: document.getElementById("titulo"),
+      estado: document.getElementById("estado"),
+      cliente: document.getElementById("cliente"),
+      fecha: document.getElementById("fecha"),
+      tabla: document.getElementById("tablaDetalle"),
+      total: document.getElementById("total"),
+      btnFacturar: document.getElementById("btnFacturar"),
+      dialogo: document.getElementById("confirmar"),
+      confirmarTexto: document.getElementById("confirmarTexto"),
+      btnCancelar: document.getElementById("btnCancelar"),
+      btnConfirmar: document.getElementById("btnConfirmar")
+    };
+
+    let pedido = null;
+
+    function mostrarAviso(texto, tipo) {
+      const colores = tipo === "ok"
+        ? "bg-emerald-100 text-emerald-800"
+        : "bg-red-100 text-red-800";
+      el.aviso.className = `mt-4 rounded-md px-4 py-3 text-sm ${colores}`;
+      el.aviso.innerHTML = texto; // el texto lo armamos nosotros, no viene del usuario
+    }
+
+    // 3) Dibuja el pedido en pantalla
+    function dibujar() {
+      el.titulo.textContent = `Pedido #${pedido.idPedido}`;
+      el.estado.innerHTML = badge(pedido.estado);
+      el.cliente.textContent = pedido.cliente;
+      el.fecha.textContent = formatoFecha(pedido.fecha);
+
+      el.tabla.innerHTML = pedido.detalles.map(d => `
+        <tr>
+          <td class="px-4 py-3 font-medium">${esc(d.autoparte)}</td>
+          <td class="px-4 py-3">${esc(d.marca)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${esc(d.cantidad)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(d.precioUnitario)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(d.cantidad * d.precioUnitario)}</td>
+        </tr>`).join("");
+
+      el.total.textContent = formatoPlata.format(pedido.total);
+
+      // El botón solo se ve si el pedido todavía está Pendiente
+      el.btnFacturar.classList.toggle("hidden", pedido.estado !== "Pendiente");
+    }
+
+    // 4) Al tocar "Facturar pedido": primero preguntamos
+    el.btnFacturar.addEventListener("click", () => {
+      el.confirmarTexto.textContent =
+        `Se va a generar la factura del pedido #${pedido.idPedido} por ${formatoPlata.format(pedido.total)} y se va a descontar el stock. Esto no se puede deshacer.`;
+      el.dialogo.showModal();
+    });
+
+    el.btnCancelar.addEventListener("click", () => el.dialogo.close());
+
+    // 5) Si confirma, facturamos
+    el.btnConfirmar.addEventListener("click", async () => {
+      el.btnConfirmar.disabled = true; // evita facturar dos veces con doble clic
+      try {
+        const factura = await facturarPedido(pedido.idPedido);
+        pedido = await obtenerPedidoPorId(pedido.idPedido); // lo volvemos a pedir ya actualizado
+        dibujar();
+        mostrarAviso(
+          `Pedido facturado. Se generó la factura #${esc(factura.idFactura)}. ` +
+          `<a href="facturas.html" class="font-medium underline">Ver facturas</a>`,
+          "ok"
+        );
+      } catch (e) {
+        mostrarAviso(esc(e.message), "error");
+      } finally {
+        el.btnConfirmar.disabled = false;
+        el.dialogo.close();
+      }
+    });
+
+    // 6) Al abrir la página: buscamos el pedido
+    async function iniciar() {
+      try {
+        pedido = id ? await obtenerPedidoPorId(id) : null;
+      } catch (e) {
+        mostrarAviso("No se pudo cargar el pedido. Probá recargar la página.", "error");
+        return;
+      }
+      if (!pedido) {
+        el.noEncontrado.classList.remove("hidden");
+        return;
+      }
+      el.contenido.classList.remove("hidden");
+      dibujar();
+    }
+
+    iniciar();
+  </script>
+</body>
+</html>

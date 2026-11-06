@@ -49,6 +49,7 @@
     </main>
   </div>
 
+  <script src="js/utils.js"></script>
   <script src="js/mock-data.js"></script>
   <script src="js/layout.js"></script>
   <script>
@@ -60,19 +61,6 @@
     const resumen = document.getElementById("resumen");
 
     let pedidos = [];
-
-    const formatoPlata = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-    const formatoFecha = f => new Date(f + "T00:00:00").toLocaleDateString("es-AR");
-
-    // Evita que un texto con < o > rompa el HTML (importante cuando vengan datos reales)
-    const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-    function badge(estado) {
-      const clases = estado === "Facturado"
-        ? "bg-emerald-100 text-emerald-800"
-        : "bg-amber-100 text-amber-800";
-      return `<span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${clases}">${esc(estado)}</span>`;
-    }
 
     function dibujar() {
       const estado = filtro.value;
