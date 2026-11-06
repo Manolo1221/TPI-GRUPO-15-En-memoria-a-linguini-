@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedidos | Autopartes G15</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+  <div class="md:flex md:min-h-screen">
+    <aside id="sidebar" class="md:w-60 md:shrink-0"></aside>
+
+    <main class="flex-1 p-4 md:p-8">
+      <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold">Pedidos</h1>
+          <p id="resumen" class="text-sm text-slate-500"></p>
+        </div>
+        <div>
+          <label for="filtroEstado" class="mb-1 block text-sm font-medium">Filtrar por estado</label>
+          <select id="filtroEstado"
+                  class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Facturado">Facturado</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <tr>
+              <th class="px-4 py-3 font-medium">N° pedido</th>
+              <th class="px-4 py-3 font-medium">Cliente</th>
+              <th class="px-4 py-3 font-medium">Fecha</th>
+              <th class="px-4 py-3 font-medium">Estado</th>
+              <th class="px-4 py-3 text-right font-medium">Total</th>
+              <th class="px-4 py-3"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody id="tablaPedidos" class="divide-y divide-slate-100"></tbody>
+        </table>
+        <p id="vacio" class="hidden px-4 py-10 text-center text-sm text-slate-500">
+          No hay pedidos con ese estado. Probá con otro filtro.
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    renderSidebar("pedidos");
+
+    const tabla = document.getElementById("tablaPedidos");
+    const filtro = document.getElementById("filtroEstado");
+    const vacio = document.getElementById("vacio");
+    const resumen = document.getElementById("resumen");
+
+    let pedidos = [];
+
+    const formatoPlata = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+    const formatoFecha = f => new Date(f + "T00:00:00").toLocaleDateString("es-AR");
+
+    // Evita que un texto con < o > rompa el HTML (importante cuando vengan datos reales)
+    const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    function badge(estado) {
+      const clases = estado === "Facturado"
+        ? "bg-emerald-100 text-emerald-800"
+        : "bg-amber-100 text-amber-800";
+      return `<span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${clases}">${esc(estado)}</span>`;
+    }
+
+    function dibujar() {
+      const estado = filtro.value;
+      const lista = estado ? pedidos.filter(p => p.estado === estado) : pedidos;
+
+      tabla.innerHTML = lista.map(p => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 font-medium">#${esc(p.idPedido)}</td>
+          <td class="px-4 py-3">${esc(p.cliente)}</td>
+          <td class="px-4 py-3">${formatoFecha(p.fecha)}</td>
+          <td class="px-4 py-3">${badge(p.estado)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(p.total)}</td>
+          <td class="px-4 py-3 text-right">
+            <a href="pedido-detalle.html?id=${encodeURIComponent(p.idPedido)}"
+               class="font-medium text-blue-700 hover:underline">Ver detalle</a>
+          </td>
+        </tr>`).join("");
+
+      vacio.classList.toggle("hidden", lista.length > 0);
+      resumen.textContent = `${lista.length} de ${pedidos.length} pedidos`;
+    }
+
+    async function iniciar() {
+      try {
+        pedidos = await obtenerPedidos();
+        dibujar();
+      } catch (e) {
+        resumen.textContent = "No se pudieron cargar los pedidos. Probá recargar la página.";
+      }
+    }
+
+    filtro.addEventListener("change", dibujar);
+    iniciar();
+  </script>
+</body>
+</html>
