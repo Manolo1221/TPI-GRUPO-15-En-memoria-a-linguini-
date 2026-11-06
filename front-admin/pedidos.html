@@ -86,6 +86,11 @@
     async function iniciar() {
       try {
         pedidos = await obtenerPedidos();
+
+        // Si venís del Dashboard (pedidos.html?estado=Pendiente), arranca filtrado
+        const estadoUrl = new URLSearchParams(window.location.search).get("estado");
+        if (estadoUrl === "Pendiente" || estadoUrl === "Facturado") filtro.value = estadoUrl;
+
         dibujar();
       } catch (e) {
         resumen.textContent = "No se pudieron cargar los pedidos. Probá recargar la página.";

@@ -103,3 +103,26 @@ async function obtenerFacturaPorId(id) {
   if (!factura) return null;
   return { ...factura, detalles: DETALLES_MOCK[factura.idPedido] || [] };
 }
+
+// ---------------------------------------------------------------
+// DASHBOARD (mock). En la API real, estos números los calcula el
+// back (los endpoints del dashboard los arma Francisco, parte 5).
+// ---------------------------------------------------------------
+
+const STOCK_BAJO_MOCK = [
+  { autoparte: "Pastillas de freno delanteras", marca: "Bosch", stock: 3, stockMinimo: 10 },
+  { autoparte: "Filtro de aceite",              marca: "Mann",  stock: 5, stockMinimo: 15 },
+  { autoparte: "Batería 12V 65Ah",              marca: "Moura", stock: 0, stockMinimo: 4 },
+  { autoparte: "Bujía",                         marca: "NGK",   stock: 8, stockMinimo: 20 },
+  { autoparte: "Correa de distribución",        marca: "Gates", stock: 2, stockMinimo: 6 }
+];
+
+async function obtenerDashboard() {
+  // Futuro: return await apiFetch("/api/dashboard");
+  return {
+    mes: "2026-11",
+    totalFacturadoMes: FACTURAS_MOCK.reduce((acc, f) => acc + f.total, 0),
+    pedidosPendientes: PEDIDOS_MOCK.filter(p => p.estado === "Pendiente").length,
+    autopartesBajoStock: STOCK_BAJO_MOCK
+  };
+}
