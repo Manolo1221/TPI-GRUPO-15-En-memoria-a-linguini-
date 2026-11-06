@@ -79,3 +79,27 @@ async function facturarPedido(id) {
   pedido.estado = "Facturado";
   return { idFactura: 5000 + pedido.idPedido };
 }
+
+// ---------------------------------------------------------------
+// FACTURAS (mock). Una factura sale de un pedido facturado: copia
+// las líneas del pedido. Campos provisorios, igual que arriba.
+// ---------------------------------------------------------------
+
+const FACTURAS_MOCK = [
+  { idFactura: 5002, idPedido: 1002, cliente: "Lucía Fernández", fecha: "2026-11-03", total: 96200 },
+  { idFactura: 5005, idPedido: 1005, cliente: "Gomería Central", fecha: "2026-11-05", total: 271000 },
+  { idFactura: 5007, idPedido: 1007, cliente: "Autos del Sur",   fecha: "2026-11-06", total: 530800 }
+];
+
+async function obtenerFacturas() {
+  // Futuro: return await apiFetch("/api/facturas");
+  return FACTURAS_MOCK;
+}
+
+// Devuelve la factura con sus líneas, o null si no existe
+async function obtenerFacturaPorId(id) {
+  // Futuro: return await apiFetch(`/api/facturas/${id}`);
+  const factura = FACTURAS_MOCK.find(f => f.idFactura === Number(id));
+  if (!factura) return null;
+  return { ...factura, detalles: DETALLES_MOCK[factura.idPedido] || [] };
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facturas | Autopartes G15</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+  <div class="md:flex md:min-h-screen">
+    <aside id="sidebar" class="md:w-60 md:shrink-0"></aside>
+
+    <main class="flex-1 p-4 md:p-8">
+      <header class="mb-6">
+        <h1 class="text-2xl font-semibold">Facturas</h1>
+        <p id="resumen" class="text-sm text-slate-500"></p>
+      </header>
+
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <tr>
+              <th class="px-4 py-3 font-medium">N° factura</th>
+              <th class="px-4 py-3 font-medium">Pedido</th>
+              <th class="px-4 py-3 font-medium">Cliente</th>
+              <th class="px-4 py-3 font-medium">Fecha</th>
+              <th class="px-4 py-3 text-right font-medium">Total</th>
+              <th class="px-4 py-3"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody id="tablaFacturas" class="divide-y divide-slate-100"></tbody>
+        </table>
+        <p id="vacio" class="hidden px-4 py-10 text-center text-sm text-slate-500">
+          Todavía no hay facturas. Se generan al facturar un pedido pendiente.
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    renderSidebar("facturas");
+
+    const tabla = document.getElementById("tablaFacturas");
+    const vacio = document.getElementById("vacio");
+    const resumen = document.getElementById("resumen");
+
+    async function iniciar() {
+      let facturas;
+      try {
+        facturas = await obtenerFacturas();
+      } catch (e) {
+        resumen.textContent = "No se pudieron cargar las facturas. Probá recargar la página.";
+        return;
+      }
+
+      tabla.innerHTML = facturas.map(f => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 font-medium">#${esc(f.idFactura)}</td>
+          <td class="px-4 py-3">
+            <a href="pedido-detalle.html?id=${encodeURIComponent(f.idPedido)}"
+               class="text-blue-700 hover:underline">#${esc(f.idPedido)}</a>
+          </td>
+          <td class="px-4 py-3">${esc(f.cliente)}</td>
+          <td class="px-4 py-3">${formatoFecha(f.fecha)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(f.total)}</td>
+          <td class="px-4 py-3 text-right">
+            <a href="factura-detalle.html?id=${encodeURIComponent(f.idFactura)}"
+               class="font-medium text-blue-700 hover:underline">Ver detalle</a>
+          </td>
+        </tr>`).join("");
+
+      vacio.classList.toggle("hidden", facturas.length > 0);
+
+      const suma = facturas.reduce((acc, f) => acc + f.total, 0);
+      resumen.textContent = `${facturas.length} facturas, ${formatoPlata.format(suma)} en total`;
+    }
+
+    iniciar();
+  </script>
+</body>
+</html>

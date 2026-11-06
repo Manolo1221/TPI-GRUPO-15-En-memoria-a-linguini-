@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detalle de la factura | Autopartes G15</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+  <div class="md:flex md:min-h-screen">
+    <aside id="sidebar" class="md:w-60 md:shrink-0"></aside>
+
+    <main class="flex-1 p-4 md:p-8">
+      <a href="facturas.html" class="text-sm font-medium text-blue-700 hover:underline">Volver a facturas</a>
+
+      <p id="error" role="status" class="mt-4 hidden rounded-md bg-red-100 px-4 py-3 text-sm text-red-800"></p>
+
+      <p id="noEncontrado" class="mt-8 hidden text-slate-600">
+        No encontramos esa factura. Volvé al listado y elegí una.
+      </p>
+
+      <section id="contenido" class="mt-4 hidden">
+        <header class="mb-6">
+          <h1 id="titulo" class="text-2xl font-semibold"></h1>
+        </header>
+
+        <dl class="mb-6 grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3">
+          <div>
+            <dt class="text-sm text-slate-500">Cliente</dt>
+            <dd id="cliente" class="font-medium"></dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">Fecha de la factura</dt>
+            <dd id="fecha" class="font-medium"></dd>
+          </div>
+          <div>
+            <dt class="text-sm text-slate-500">Pedido de origen</dt>
+            <dd class="font-medium"><a id="pedidoLink" class="text-blue-700 hover:underline"></a></dd>
+          </div>
+        </dl>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <tr>
+                <th class="px-4 py-3 font-medium">Autoparte</th>
+                <th class="px-4 py-3 font-medium">Marca</th>
+                <th class="px-4 py-3 text-right font-medium">Cantidad</th>
+                <th class="px-4 py-3 text-right font-medium">Precio unitario</th>
+                <th class="px-4 py-3 text-right font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="tablaDetalle" class="divide-y divide-slate-100"></tbody>
+            <tfoot class="border-t border-slate-200 bg-slate-50">
+              <tr>
+                <td colspan="4" class="px-4 py-3 text-right font-medium">Total</td>
+                <td id="total" class="px-4 py-3 text-right text-base font-semibold tabular-nums"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    renderSidebar("facturas");
+
+    // Número de factura tomado de la dirección: factura-detalle.html?id=5002
+    const id = new URLSearchParams(window.location.search).get("id");
+
+    async function iniciar() {
+      let factura = null;
+      try {
+        factura = id ? await obtenerFacturaPorId(id) : null;
+      } catch (e) {
+        const error = document.getElementById("error");
+        error.textContent = "No se pudo cargar la factura. Probá recargar la página.";
+        error.classList.remove("hidden");
+        return;
+      }
+
+      if (!factura) {
+        document.getElementById("noEncontrado").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("titulo").textContent = `Factura #${factura.idFactura}`;
+      document.getElementById("cliente").textContent = factura.cliente;
+      document.getElementById("fecha").textContent = formatoFecha(factura.fecha);
+
+      const pedidoLink = document.getElementById("pedidoLink");
+      pedidoLink.textContent = `#${factura.idPedido}`;
+      pedidoLink.href = `pedido-detalle.html?id=${encodeURIComponent(factura.idPedido)}`;
+
+      document.getElementById("tablaDetalle").innerHTML = factura.detalles.map(d => `
+        <tr>
+          <td class="px-4 py-3 font-medium">${esc(d.autoparte)}</td>
+          <td class="px-4 py-3">${esc(d.marca)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${esc(d.cantidad)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(d.precioUnitario)}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${formatoPlata.format(d.cantidad * d.precioUnitario)}</td>
+        </tr>`).join("");
+
+      document.getElementById("total").textContent = formatoPlata.format(factura.total);
+      document.getElementById("contenido").classList.remove("hidden");
+    }
+
+    iniciar();
+  </script>
+</body>
+</html>
